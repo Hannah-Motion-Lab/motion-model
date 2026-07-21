@@ -62,3 +62,11 @@ uv pip install --python .venv/bin/python -r requirements.txt
 - [ ] HumanML3D/AMASS action pairs (**user: register at amass.is.tue.mpg.de**, drop archives in `data/amass/raw/`)
 - [ ] Beat EMAGE on FGD + eyeball test → swap into Hannah (user's call; `MOTION_SIDECAR_URL` flip)
 - [ ] Phase 2: video-mining fine-tune ("otaku" style; `scripts/mine_video.py` + GVHMR), Motion-X++, streaming serve
+
+## Setup / assets not included
+
+Excluded from the repo (obtain locally):
+- `assets/smplx/SMPLX_NEUTRAL_2020.npz` — the SMPL-X model (~160MB, **non-commercial
+  license**). Get it from the official SMPL-X site.
+- `data/` corpora (BEAT2, AMASS, GRAB, HumanML3D) — see the training scripts.
+- `runs/` trained checkpoints, and the `uv` venv (Python 3.12, torch cu128).
