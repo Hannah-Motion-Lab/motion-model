@@ -1,0 +1,36 @@
+# Stage B — latent flow-matching DiT (dual text conditioning)
+data:
+  beat2_root: data/beat2/beat_english_v2.0.0   # transcript slot (speech) — ONLY BEAT2
+  humanml3d_root: data/humanml3d               # action slot: body actions
+  grab_root: data/grab_actions                 # action slot: finger-articulated hand actions
+  window: 64
+  stride: 20
+  fps: 30
+
+vae_ckpt: runs/vae4/latest.pt
+
+model:
+  dim: 512
+  depth: 8
+  heads: 8
+  text_encoder: google/flan-t5-base   # frozen; word-level for transcript, pooled for action
+  cond_dropout: 0.15                  # per-slot CFG dropout (transcript, action, emotion)
+  emotions: 8
+  speakers: 32
+  prefix_frames: 4
+
+train:
+  batch_size: 224       # was 48 — T5 amortizes well with batch (+33% throughput vs 112); ~5GB
+  lr: 1.3e-4            # conservative for the bigger batch (below sqrt-scale) + long warmup
+  hml_ratio: 0.5     # fraction of batches from the action slot (HumanML3D + GRAB)
+  steps: 80000          # bs224 => ~18M samples ≈ v1's 400k@bs48; loss plateaus well before
+  warmup: 3000
+  amp: true
+  log_every: 50
+  ckpt_every: 5000
+  out_dir: runs/flow4b
+
+sample:
+  steps: 8                            # few-step flow sampling (real-time)
+  guidance_transcript: 2.0
+  guidance_action: 3.0

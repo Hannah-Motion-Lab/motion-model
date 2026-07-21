@@ -1,0 +1,32 @@
+# Stage A — part-wise motion VAE
+data:
+  beat2_root: data/beat2/beat_english_v2.0.0
+  amass_root: data/amass            # optional; skipped if absent
+  window: 64                        # frames @30fps
+  stride: 20
+  fps: 30
+
+model:
+  parts:                            # joint indices per part (SMPL-X 55-joint order)
+    upper: [3, 6, 9, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]
+    hands: [25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39,
+            40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54]
+    lower: [0, 1, 2, 4, 5, 7, 8, 10, 11]   # + global orient(0) ; trans appended
+    face:  [22, 23, 24]             # jaw + eyes (kept small; expressions later)
+  latent_dim: 256                   # per part
+  down_t: 2                         # temporal downsample x4 (64 -> 16 latent frames)
+  channels: 512
+  kl_weight: 0.001   # 1e-4 let the posterior blow up (kl>1000 -> fp16 NaN at ~13k steps)
+
+train:
+  batch_size: 64
+  lr: 2.0e-4
+  steps: 200000
+  warmup: 1000
+  amp: true
+  log_every: 50
+  ckpt_every: 5000
+  out_dir: runs/vae
+  fk_loss_weight: 1.0
+  vel_loss_weight: 1.0
+  smplx_model_path: assets/SMPLX_NEUTRAL_2020.npz

@@ -1,0 +1,35 @@
+# Stage B — latent flow-matching DiT (dual text conditioning)
+data:
+  beat2_root: data/beat2/beat_english_v2.0.0
+  humanml3d_root: data/humanml3d    # optional until AMASS registration
+  window: 64
+  stride: 20
+  fps: 30
+
+vae_ckpt: runs/vae/latest.pt
+
+model:
+  dim: 512
+  depth: 8
+  heads: 8
+  text_encoder: google/flan-t5-base   # frozen; word-level for transcript, pooled for action
+  cond_dropout: 0.15                  # per-slot CFG dropout (transcript, action, emotion)
+  emotions: 8
+  speakers: 32
+  prefix_frames: 4
+
+train:
+  batch_size: 48
+  lr: 1.0e-4
+  hml_ratio: 0.35    # fraction of batches drawn from HumanML3D (action slot)
+  steps: 400000
+  warmup: 2000
+  amp: true
+  log_every: 50
+  ckpt_every: 5000
+  out_dir: runs/flow
+
+sample:
+  steps: 8                            # few-step flow sampling (real-time)
+  guidance_transcript: 2.0
+  guidance_action: 3.0

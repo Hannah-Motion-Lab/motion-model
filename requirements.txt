@@ -1,0 +1,25 @@
+# hannah-motion-lab — venv: uv venv --python 3.12 .venv
+# torch DEBE venir del índice cu128 (RTX 50xx / Blackwell sm_120):
+#   uv pip install torch --index-url https://download.pytorch.org/whl/cu128
+torch
+transformers<5     # frozen T5 text encoder
+huggingface_hub    # BEAT2 download
+librosa
+soundfile
+numpy
+einops
+omegaconf
+smplx              # FK for position losses + rendering
+tensorboard
+fastapi
+uvicorn
+python-multipart
+pytest
+textgrid           # BEAT2 word-level alignments
+tqdm
+pyrender
+trimesh
+imageio[ffmpeg]
+scipy
+yt-dlp
+faster-whisper  # mine_video transcription

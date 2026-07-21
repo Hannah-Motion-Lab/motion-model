@@ -1,0 +1,16 @@
+.venv/
+data/
+third_party/
+runs/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+*.mp4
+*.npz.tmp
+nohup.out
+assets/*.npz
+assets/**/*.npz
+demo_v4*/
+scratchpad/
+*.log
