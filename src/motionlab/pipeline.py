@@ -28,7 +28,7 @@ class MotionPipeline:
     def __init__(self, vae_ckpt: str, flow_ckpt: str, device: str = "cuda"):
         self.device = device
         self.vae = load_vae(vae_ckpt, device)
-        ckpt = torch.load(flow_ckpt, map_location=device, weights_only=False)
+        ckpt = torch.load(flow_ckpt, map_location=device, weights_only=True)  # checkpoints are plain tensors + dict cfg; never unpickle code
         fcfg = ckpt["cfg"]["model"]
         self.window = ckpt["cfg"]["data"]["window"]
         self.fps = ckpt["cfg"]["data"].get("fps", 30)
