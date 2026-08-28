@@ -10,7 +10,6 @@ from pathlib import Path
 import torch
 from omegaconf import OmegaConf
 from torch.utils.data import DataLoader
-from torch.utils.tensorboard import SummaryWriter
 
 from ..data.beat2 import Beat2Dataset, collate
 from ..models.vae import PartwiseMotionVAE, VAEConfig
@@ -100,6 +99,7 @@ def main():
 
     out_dir = Path(cfg.train.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+    from torch.utils.tensorboard import SummaryWriter  # lazy: serving imports load_vae from here without tensorboard
     writer = SummaryWriter(out_dir)
 
     from ..models.text import encode_captions
