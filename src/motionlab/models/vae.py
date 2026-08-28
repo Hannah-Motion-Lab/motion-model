@@ -155,3 +155,19 @@ class PartwiseMotionVAE(nn.Module):
         x = x.transpose(1, 2)
         L = self.cfg.latent_dim
         return {n: x[:, i * L:(i + 1) * L, :] for i, n in enumerate(self.part_names)}
+
+
+def load_vae(ckpt_path: str, device: str) -> PartwiseMotionVAE:
+    """The frozen VAE from a checkpoint. Lives next to the model it builds so that serving
+    (pipeline.py) never imports the training stack (omegaconf, tensorboard, the loaders).
+    weights_only=True: the checkpoint is plain tensors + a dict cfg, never code."""
+    ckpt = torch.load(ckpt_path, map_location=device, weights_only=True)
+    vcfg = ckpt["cfg"]["model"]
+    vae = PartwiseMotionVAE(VAEConfig(
+        parts=vcfg["parts"], latent_dim=vcfg["latent_dim"],
+        channels=vcfg["channels"], down_t=vcfg["down_t"],
+    )).to(device).eval()
+    vae.load_state_dict(ckpt["model"])
+    for p in vae.parameters():
+        p.requires_grad_(False)
+    return vae

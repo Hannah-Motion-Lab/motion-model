@@ -1,7 +1,7 @@
 .venv/
-data/
-third_party/
-runs/
+/data/
+/third_party/
+/runs/
 __pycache__/
 *.pyc
 *.egg-info/
@@ -14,3 +14,5 @@ assets/**/*.npz
 demo_v4*/
 scratchpad/
 *.log
+# the curated gesture clips ARE source (tiny, needed by [MOTION:]); SMPL-X and datasets stay out
+!assets/action_library/*.npz

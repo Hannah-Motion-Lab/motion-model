@@ -14,7 +14,7 @@ import os
 from .models.flow import LatentFlowDiT, FlowConfig, sample
 from .models.text import encode_transcripts, encode_captions
 from .postprocess import postprocess
-from .train.train_flow import load_vae
+from .models.vae import load_vae
 
 
 @dataclass

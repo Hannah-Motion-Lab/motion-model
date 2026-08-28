@@ -12,22 +12,11 @@ from omegaconf import OmegaConf
 from torch.utils.data import DataLoader
 
 from ..data.beat2 import Beat2Dataset, collate
-from ..models.vae import PartwiseMotionVAE, VAEConfig
+from ..models.vae import PartwiseMotionVAE, VAEConfig, load_vae  # noqa: F401 (scripts import load_vae from here)
 from ..models.flow import LatentFlowDiT, FlowConfig, flow_loss
 from ..models.text import encode_transcripts
 
 
-def load_vae(ckpt_path: str, device: str) -> PartwiseMotionVAE:
-    ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
-    vcfg = ckpt["cfg"]["model"]
-    vae = PartwiseMotionVAE(VAEConfig(
-        parts=vcfg["parts"], latent_dim=vcfg["latent_dim"],
-        channels=vcfg["channels"], down_t=vcfg["down_t"],
-    )).to(device).eval()
-    vae.load_state_dict(ckpt["model"])
-    for p in vae.parameters():
-        p.requires_grad_(False)
-    return vae
 
 
 def main():

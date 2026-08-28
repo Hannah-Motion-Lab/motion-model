@@ -9,4 +9,3 @@ numpy
 scipy
 fastapi
 uvicorn
-omegaconf          # pipeline.load_vae reads the training config
