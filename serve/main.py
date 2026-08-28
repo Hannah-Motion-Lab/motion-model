@@ -6,6 +6,7 @@
 #
 # Request extends the contract additively: text and/or action, emotion,
 # intensity, session_id (keeps a pose-prefix per session for continuity).
+import asyncio
 import base64
 import logging
 import os
@@ -64,14 +65,27 @@ if DEVICE == "cpu":
     torch.set_num_threads(max(1, os.cpu_count() or 1))
 logger.info(f"Loading pipeline (vae={VAE_CKPT}, flow={FLOW_CKPT}) on {DEVICE}...")
 pipeline = MotionPipeline(VAE_CKPT, FLOW_CKPT, device=DEVICE)
-# Warm-up: pulls the text encoder from the Hub if needed and runs one short window, so the
-# first spoken sentence does not pay for it.
-try:
-    _t0 = time.time()
-    pipeline.generate(text="hello", duration_s=1.0, emotion=0)
-    logger.info(f"Motion-lab pipeline ready on {DEVICE} (warm-up {time.time() - _t0:.1f}s).")
-except Exception as exc:  # noqa: BLE001 — a failed warm-up is not fatal; the first request will say why
-    logger.warning(f"warm-up failed ({exc}); serving anyway")
+# Warm-up in the BACKGROUND: pulls the text encoder from the Hub if needed (a minute on a slow
+# link) and runs one short window. /health answers at once with ready=false so a launcher can say
+# "warming up" instead of "missing"; /motion waits for it (gestures are never skipped).
+import threading
+_READY = threading.Event()
+_LOCK = threading.Lock()
+
+
+def _warm_up() -> None:
+    try:
+        _t0 = time.time()
+        with _LOCK:
+            pipeline.generate(text="hello", duration_s=1.0, emotion=0)
+        logger.info(f"Motion-lab pipeline ready on {DEVICE} (warm-up {time.time() - _t0:.1f}s).")
+    except Exception as exc:  # noqa: BLE001 — a failed warm-up is not fatal; the first request will say why
+        logger.warning(f"warm-up failed ({exc}); serving anyway")
+    finally:
+        _READY.set()
+
+
+threading.Thread(target=_warm_up, name="motion-warm-up", daemon=True).start()
 
 _session_prefix: dict[str, object] = {}
 
@@ -156,6 +170,9 @@ def _b64(arr: np.ndarray) -> str:
 async def motion(req: MotionRequest):
     if not req.text and not req.action:
         raise HTTPException(status_code=400, detail="text or action required")
+    if not _READY.is_set():
+        # first sentences of the first run: wait for the warm-up rather than answer without motion
+        await asyncio.get_event_loop().run_in_executor(None, _READY.wait)
     emotion = EMOTIONS.index(req.emotion) if req.emotion in EMOTIONS else 0
 
     start = time.time()
@@ -197,4 +214,4 @@ async def motion(req: MotionRequest):
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "model": "motionlab-flow", "fps": pipeline.fps, "device": DEVICE}
+    return {"status": "ok", "model": "motionlab-flow", "fps": pipeline.fps, "device": DEVICE, "ready": _READY.is_set()}
