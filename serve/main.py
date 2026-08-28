@@ -12,7 +12,12 @@ import os
 import time
 from pathlib import Path
 
+# Apple Silicon: let unsupported MPS ops fall back to the CPU instead of failing. Must be set
+# before torch initialises its MPS backend (i.e. before anything imports torch).
+os.environ.setdefault("PYTORCH_ENABLE_MPS_FALLBACK", "1")
+
 import numpy as np
+import torch
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
@@ -32,9 +37,41 @@ app = FastAPI(title="Hannah Motion-Lab Sidecar", version="0.1.0")
 VAE_CKPT = os.environ.get("VAE_CKPT", "runs/vae/latest.pt")
 FLOW_CKPT = os.environ.get("FLOW_CKPT", "runs/flow/latest.pt")
 
-logger.info(f"Loading pipeline (vae={VAE_CKPT}, flow={FLOW_CKPT})...")
-pipeline = MotionPipeline(VAE_CKPT, FLOW_CKPT)
-logger.info("Motion-lab pipeline ready.")
+
+
+def pick_device() -> str:
+    """MOTION_DEVICE=auto|cuda|mps|cpu. `auto` = CUDA if there is one, else Apple's MPS, else CPU.
+    The model is small (56M + 46M params, 8 sampling steps): on a CPU a sentence takes from half
+    a second to a few seconds instead of ~0.2 s — slower, but the gestures are the point."""
+    want = os.environ.get("MOTION_DEVICE", "auto").lower()
+    if want in ("cuda", "mps", "cpu"):
+        if want == "cuda" and not torch.cuda.is_available():
+            logger.warning("MOTION_DEVICE=cuda but CUDA is not available; using CPU")
+            return "cpu"
+        if want == "mps" and not torch.backends.mps.is_available():
+            logger.warning("MOTION_DEVICE=mps but MPS is not available; using CPU")
+            return "cpu"
+        return want
+    if torch.cuda.is_available():
+        return "cuda"
+    if torch.backends.mps.is_available():
+        return "mps"
+    return "cpu"
+
+
+DEVICE = pick_device()
+if DEVICE == "cpu":
+    torch.set_num_threads(max(1, os.cpu_count() or 1))
+logger.info(f"Loading pipeline (vae={VAE_CKPT}, flow={FLOW_CKPT}) on {DEVICE}...")
+pipeline = MotionPipeline(VAE_CKPT, FLOW_CKPT, device=DEVICE)
+# Warm-up: pulls the text encoder from the Hub if needed and runs one short window, so the
+# first spoken sentence does not pay for it.
+try:
+    _t0 = time.time()
+    pipeline.generate(text="hello", duration_s=1.0, emotion=0)
+    logger.info(f"Motion-lab pipeline ready on {DEVICE} (warm-up {time.time() - _t0:.1f}s).")
+except Exception as exc:  # noqa: BLE001 — a failed warm-up is not fatal; the first request will say why
+    logger.warning(f"warm-up failed ({exc}); serving anyway")
 
 _session_prefix: dict[str, object] = {}
 
@@ -160,4 +197,4 @@ async def motion(req: MotionRequest):
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "model": "motionlab-flow", "fps": pipeline.fps}
+    return {"status": "ok", "model": "motionlab-flow", "fps": pipeline.fps, "device": DEVICE}

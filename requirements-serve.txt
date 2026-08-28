@@ -1,0 +1,11 @@
+# Serving only (the :8005 sidecar Hannah talks to). Training/rendering extras live in requirements.txt.
+# torch is installed FIRST, separately, from the right index for the machine:
+#   NVIDIA (any OS):  --index-url https://download.pytorch.org/whl/cu128   (RTX 50xx needs cu128)
+#   macOS:            plain PyPI (MPS/CPU build)
+#   CPU-only Linux/Windows: --index-url https://download.pytorch.org/whl/cpu
+torch
+transformers<5     # frozen flan-t5-base text encoder (downloaded from the Hub on first use, ~1 GB)
+numpy
+scipy
+fastapi
+uvicorn
