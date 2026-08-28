@@ -62,7 +62,9 @@ def pick_device() -> str:
 
 DEVICE = pick_device()
 if DEVICE == "cpu":
-    torch.set_num_threads(max(1, os.cpu_count() or 1))
+    # half the cores: Whisper and Kokoro share this CPU, and a warm-up that pins every core made
+    # the listening time out on Windows/macOS laptops
+    torch.set_num_threads(max(1, (os.cpu_count() or 2) // 2))
 logger.info(f"Loading pipeline (vae={VAE_CKPT}, flow={FLOW_CKPT}) on {DEVICE}...")
 pipeline = MotionPipeline(VAE_CKPT, FLOW_CKPT, device=DEVICE)
 # Warm-up in the BACKGROUND: pulls the text encoder from the Hub if needed (a minute on a slow
