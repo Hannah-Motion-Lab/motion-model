@@ -5,7 +5,15 @@
 #   CPU-only Linux/Windows: --index-url https://download.pytorch.org/whl/cpu
 torch
 transformers<5     # frozen flan-t5-base text encoder (downloaded from the Hub on first use, ~1 GB)
-numpy
+# numpy is pinned on Intel Macs: there torch resolves to 2.2.2 (the last release with x86_64 Mac
+# wheels) and that build is compiled against the numpy 1.x ABI. Under numpy 2.x torch imports with
+# "Failed to initialize NumPy: _ARRAY_API not found" and every tensor->numpy conversion then raises
+# "Numpy is not available", so every /motion answers 500. torch 2.2.2 declares no numpy bound of its
+# own, which is why the pin has to live here. Apple Silicon and Linux get a modern torch and stay on
+# numpy 2.x. scipy needs no pin of its own: under numpy<2 the resolver backtracks it to the 1.17.x
+# line, the last one that still accepts numpy 1.26.
+numpy<2; sys_platform == "darwin" and platform_machine == "x86_64"
+numpy; sys_platform != "darwin" or platform_machine != "x86_64"
 scipy
 fastapi
 uvicorn

@@ -73,16 +73,24 @@ pipeline = MotionPipeline(VAE_CKPT, FLOW_CKPT, device=DEVICE)
 import threading
 _READY = threading.Event()
 _LOCK = threading.Lock()
+# _READY only means "the warm-up finished" — it is what /motion waits on, so it has to be set even
+# when the warm-up blew up, or the first request would hang for ever. It is NOT proof that the
+# pipeline works, so keep the failure reason separately: a dead pipeline that still answered
+# {"status": "ok", "ready": true} is exactly how a torch/numpy ABI mismatch stayed invisible while
+# every single /motion returned 500.
+_WARM_UP_ERROR: str | None = None
 
 
 def _warm_up() -> None:
+    global _WARM_UP_ERROR
     try:
         _t0 = time.time()
         with _LOCK:
             pipeline.generate(text="hello", duration_s=1.0, emotion=0)
         logger.info(f"Motion-lab pipeline ready on {DEVICE} (warm-up {time.time() - _t0:.1f}s).")
-    except Exception as exc:  # noqa: BLE001 — a failed warm-up is not fatal; the first request will say why
-        logger.warning(f"warm-up failed ({exc}); serving anyway")
+    except Exception as exc:  # noqa: BLE001 — not fatal: /motion still answers, with the real error
+        _WARM_UP_ERROR = f"{type(exc).__name__}: {exc}"
+        logger.error(f"warm-up FAILED ({_WARM_UP_ERROR}); /health reports status=error, ready=false")
     finally:
         _READY.set()
 
@@ -214,6 +222,18 @@ async def motion(req: MotionRequest):
     }
 
 
+# Existing keys keep their exact meaning — the launcher reads `ready` to tell "warming up" from
+# "missing" and `device` for its status line — and `warm_up_error` is purely additive. A warm-up
+# that FAILED is neither ready nor ok: it stays HTTP 200 so the launcher's port probe still finds
+# the sidecar, but the body has to say that gestures are broken instead of showing a false green.
 @app.get("/health")
-async def health():
-    return {"status": "ok", "model": "motionlab-flow", "fps": pipeline.fps, "device": DEVICE, "ready": _READY.is_set()}
+async def health() -> dict:
+    failed = _WARM_UP_ERROR is not None
+    return {
+        "status": "error" if failed else "ok",
+        "model": "motionlab-flow",
+        "fps": pipeline.fps,
+        "device": DEVICE,
+        "ready": _READY.is_set() and not failed,
+        "warm_up_error": _WARM_UP_ERROR,
+    }
