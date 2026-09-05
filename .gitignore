@@ -16,3 +16,5 @@ scratchpad/
 *.log
 # the curated gesture clips ARE source (tiny, needed by [MOTION:]); SMPL-X and datasets stay out
 !assets/action_library/*.npz
+build/
+*.egg-info/

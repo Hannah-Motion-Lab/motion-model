@@ -23,7 +23,7 @@ Two-stage latent generative model (the current BEAT2-SOTA recipe — flow-matchi
      - **action slot** — caption embedding ("waves hand excitedly"), trained on captioned mocap (HumanML3D / Motion-X++).
    - Plus: emotion (BEAT2's 8 labels), speaker/style id, **intensity scalar** and per-slot guidance weights (the "otaku dial"), and a **4-frame motion prefix** for seamless streaming across sentences and into/out of actions.
    - Few-step sampling → real-time on an RTX 5070 Ti.
-3. Output contract: SMPL-X `poses (T×165 axis-angle, 30 fps)` + `trans (T×3)` — exactly what Hannah's avatar already plays; `serve/main.py` mirrors the EMAGE sidecar schema (dev port 8005).
+3. Output contract: SMPL-X `poses (T×165 axis-angle, 30 fps)` + `trans (T×3)` — exactly what Hannah's avatar already plays; `motionlab.serve` mirrors the EMAGE sidecar schema (port 8005).
 
 ## Data
 
@@ -56,7 +56,7 @@ uv pip install --python .venv/bin/python -r requirements.txt
 - [x] BEAT2 data pipeline + tests (17 passing; 1 skip until textgrids finish downloading)
 - [x] Part-wise VAE + flow DiT implemented, smoke-trained (loss falls, checkpoints, sampler works)
 - [x] End-to-end demo pipeline runs: `demo/generate.py --text ... --action ...` → mp4
-- [x] Serve module (`serve/main.py`, :8005) schema-compatible with the EMAGE sidecar
+- [x] Serve module (`python -m motionlab.serve`, :8005) schema-compatible with the EMAGE sidecar; installable with `pip install "motionlab[serve] @ git+https://github.com/Vanth-Labs/motion-model.git@v0.1.0"` (Hannah's gesture sidecar does exactly that)
 - [x] Stage A VAE trained (100k steps, 0 NaN, 0.024 rad test recon)
 - [x] Stage B flow trained on BEAT2 co-text (400k steps, loss 1.11→0.57; emotion conditioning verified)
 - [ ] HumanML3D/AMASS action pairs (**user: register at amass.is.tue.mpg.de**, drop archives in `data/amass/raw/`)

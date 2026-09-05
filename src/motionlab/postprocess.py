@@ -23,7 +23,7 @@ _mean_pose = None
 def get_mean_pose():
     global _mean_pose
     if _mean_pose is None:
-        p = Path(__file__).resolve().parents[2] / "assets" / "mean_pose.npy"
+        p = Path(__file__).resolve().parent / "assets" / "mean_pose.npy"
         _mean_pose = np.load(p) if p.exists() else np.zeros(165, dtype=np.float32)
     return _mean_pose
 

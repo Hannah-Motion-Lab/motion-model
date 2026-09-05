@@ -19,15 +19,15 @@ def test_b64_layout_matches_emage_contract():
 
 
 def test_serve_module_declares_contract_fields():
-    src = (Path(__file__).parents[1] / "serve" / "main.py").read_text()
+    src = (Path(__file__).parents[1] / "src" / "motionlab" / "serve.py").read_text()
     for field in REQUIRED_FIELDS:
-        assert f'"{field}"' in src, f"serve/main.py response is missing contract field {field}"
+        assert f'"{field}"' in src, f"motionlab/serve.py response is missing contract field {field}"
 
 
 def test_motion_request_defaults():
     # request model importable without torch checkpoints? serve imports pipeline
     # at module load, so validate the pydantic model shape from source instead.
-    src = (Path(__file__).parents[1] / "serve" / "main.py").read_text()
+    src = (Path(__file__).parents[1] / "src" / "motionlab" / "serve.py").read_text()
     assert "class MotionRequest" in src
     for field in ("text", "action", "duration_s", "emotion", "intensity", "session_id"):
         assert field in src

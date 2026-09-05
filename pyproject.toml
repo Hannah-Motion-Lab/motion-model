@@ -3,6 +3,21 @@ name = "motionlab"
 version = "0.1.0"
 description = "Hannah's unified text-conditioned motion model (research)"
 requires-python = ">=3.12"
+# Inference only. torch comes first from the index that fits the machine (cu128 for NVIDIA, cpu, or
+# PyPI on macOS); see requirements-serve.txt. Training extras stay in requirements.txt.
+dependencies = [
+  "torch",
+  "numpy<2; sys_platform == 'darwin' and platform_machine == 'x86_64'",
+  "numpy; sys_platform != 'darwin' or platform_machine != 'x86_64'",
+  "scipy",
+  "transformers<5",
+]
+
+[project.optional-dependencies]
+serve = ["fastapi", "uvicorn"]
+
+[project.scripts]
+motionlab-serve = "motionlab.serve:main"
 
 [build-system]
 requires = ["setuptools>=68"]
@@ -10,6 +25,9 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+motionlab = ["assets/mean_pose.npy", "assets/action_library/*.npz"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
